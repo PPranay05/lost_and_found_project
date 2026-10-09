@@ -3,8 +3,10 @@ package com.example.lostfound.controller;
 import com.example.lostfound.dto.FoundItemDto;
 import com.example.lostfound.dto.UserDto;
 import com.example.lostfound.service.FoundItemService;
+import com.example.lostfound.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,16 +22,18 @@ import java.util.List;
 public class FoundItemController {
 
     private final FoundItemService foundItemService;
+    private final AuthUtil authUtil;
 
     @Autowired
-    public FoundItemController(FoundItemService foundItemService) {
+    public FoundItemController(FoundItemService foundItemService, AuthUtil authUtil) {
         this.foundItemService = foundItemService;
+        this.authUtil = authUtil;
     }
 
     @PostMapping
     @Operation(summary = "Register a found item (automatically receives QR Code)")
-    public ResponseEntity<FoundItemDto> registerFoundItem(@Valid @RequestBody FoundItemDto dto, HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+    public ResponseEntity<FoundItemDto> registerFoundItem(@Valid @RequestBody FoundItemDto dto, HttpSession session, HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         if (loggedIn == null) {
             throw new com.example.lostfound.exception.UnauthorizedException("You must be logged in to register a found item. Please login or register.");
         }
@@ -57,8 +61,8 @@ public class FoundItemController {
 
     @GetMapping("/my")
     @Operation(summary = "Get found items registered by current logged-in user")
-    public ResponseEntity<List<FoundItemDto>> getMyFoundItems(HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+    public ResponseEntity<List<FoundItemDto>> getMyFoundItems(HttpSession session, HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         if (loggedIn == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }

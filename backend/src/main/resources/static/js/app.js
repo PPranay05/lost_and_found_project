@@ -11,13 +11,25 @@ let currentUser = null;
 // Initialize Page Header / Session State
 async function initSession() {
   try {
-    const res = await fetch(`${API_BASE}/auth/me`);
+    const headers = {};
+    const storedUserStr = localStorage.getItem('currentUser');
+    if (storedUserStr) {
+      try {
+        const storedUser = JSON.parse(storedUserStr);
+        if (storedUser && storedUser.id) headers['X-User-Id'] = String(storedUser.id);
+        if (storedUser && storedUser.email) headers['X-User-Email'] = storedUser.email;
+      } catch (e) {}
+    }
+
+    const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include', headers });
     if (res.ok) {
       currentUser = await res.json();
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
       updateNavbar(currentUser);
       return currentUser;
     } else {
       currentUser = null;
+      localStorage.removeItem('currentUser');
       updateNavbar(null);
       return null;
     }
@@ -110,14 +122,14 @@ function updateNavbar(user) {
 // Handle Logout
 async function handleLogout() {
   try {
-    await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
-    showToast('Logged out successfully', 'success');
-    setTimeout(() => {
-      window.location.href = 'login.html';
-    }, 500);
-  } catch (err) {
-    showToast('Logout failed', 'error');
-  }
+    await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
+  } catch (err) {}
+  localStorage.removeItem('currentUser');
+  currentUser = null;
+  showToast('Logged out successfully', 'success');
+  setTimeout(() => {
+    window.location.href = 'login.html';
+  }, 500);
 }
 
 // Fetch API Wrapper
@@ -126,7 +138,17 @@ async function fetchApi(endpoint, options = {}) {
     'Content-Type': 'application/json'
   };
 
+  const storedUserStr = localStorage.getItem('currentUser');
+  if (storedUserStr) {
+    try {
+      const storedUser = JSON.parse(storedUserStr);
+      if (storedUser && storedUser.id) defaultHeaders['X-User-Id'] = String(storedUser.id);
+      if (storedUser && storedUser.email) defaultHeaders['X-User-Email'] = storedUser.email;
+    } catch (e) {}
+  }
+
   const config = {
+    credentials: 'include',
     ...options,
     headers: {
       ...defaultHeaders,
@@ -139,6 +161,11 @@ async function fetchApi(endpoint, options = {}) {
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.message || 'API request failed');
+    }
+
+    if (data && data.user) {
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      currentUser = data.user;
     }
     return data;
   } catch (err) {

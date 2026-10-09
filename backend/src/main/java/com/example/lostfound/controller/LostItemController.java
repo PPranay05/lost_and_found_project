@@ -3,8 +3,10 @@ package com.example.lostfound.controller;
 import com.example.lostfound.dto.LostItemDto;
 import com.example.lostfound.dto.UserDto;
 import com.example.lostfound.service.LostItemService;
+import com.example.lostfound.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,16 +22,18 @@ import java.util.List;
 public class LostItemController {
 
     private final LostItemService lostItemService;
+    private final AuthUtil authUtil;
 
     @Autowired
-    public LostItemController(LostItemService lostItemService) {
+    public LostItemController(LostItemService lostItemService, AuthUtil authUtil) {
         this.lostItemService = lostItemService;
+        this.authUtil = authUtil;
     }
 
     @PostMapping
     @Operation(summary = "Submit a report for a lost item")
-    public ResponseEntity<LostItemDto> reportLostItem(@Valid @RequestBody LostItemDto dto, HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+    public ResponseEntity<LostItemDto> reportLostItem(@Valid @RequestBody LostItemDto dto, HttpSession session, HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         if (loggedIn == null) {
             throw new com.example.lostfound.exception.UnauthorizedException("You must be logged in to report a lost item. Please login or register.");
         }
@@ -57,8 +61,8 @@ public class LostItemController {
 
     @GetMapping("/my")
     @Operation(summary = "Get lost item reports submitted by current logged-in user")
-    public ResponseEntity<List<LostItemDto>> getMyLostItems(HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+    public ResponseEntity<List<LostItemDto>> getMyLostItems(HttpSession session, HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         if (loggedIn == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }

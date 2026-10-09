@@ -70,6 +70,12 @@ public class UserService {
         return new UserDto(user);
     }
 
+    public UserDto getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        return new UserDto(user);
+    }
+
     public User getUserEntityById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));

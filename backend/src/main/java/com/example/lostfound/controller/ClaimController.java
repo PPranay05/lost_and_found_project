@@ -6,8 +6,10 @@ import com.example.lostfound.entity.ClaimStatus;
 import com.example.lostfound.entity.User;
 import com.example.lostfound.service.ClaimService;
 import com.example.lostfound.service.UserService;
+import com.example.lostfound.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,17 +26,19 @@ public class ClaimController {
 
     private final ClaimService claimService;
     private final UserService userService;
+    private final AuthUtil authUtil;
 
     @Autowired
-    public ClaimController(ClaimService claimService, UserService userService) {
+    public ClaimController(ClaimService claimService, UserService userService, AuthUtil authUtil) {
         this.claimService = claimService;
         this.userService = userService;
+        this.authUtil = authUtil;
     }
 
     @PostMapping
     @Operation(summary = "Submit an ownership claim request for a found item")
-    public ResponseEntity<ClaimRequestDto> submitClaim(@Valid @RequestBody ClaimRequestDto dto, HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+    public ResponseEntity<ClaimRequestDto> submitClaim(@Valid @RequestBody ClaimRequestDto dto, HttpSession session, HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         if (loggedIn == null) {
             throw new com.example.lostfound.exception.UnauthorizedException("You must be logged in to submit an ownership claim. Please login or register.");
         }
@@ -56,8 +60,8 @@ public class ClaimController {
 
     @GetMapping("/my")
     @Operation(summary = "Get claims submitted by current logged-in user")
-    public ResponseEntity<List<ClaimRequestDto>> getMyClaims(HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+    public ResponseEntity<List<ClaimRequestDto>> getMyClaims(HttpSession session, HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         if (loggedIn == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -70,8 +74,9 @@ public class ClaimController {
                                                         @RequestParam ClaimStatus status,
                                                         @RequestParam(required = false) String adminNotes,
                                                         @RequestParam(required = false) String qrVerificationResult,
-                                                        HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+                                                        HttpSession session,
+                                                        HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         User adminUser = loggedIn != null ? userService.getUserEntityById(loggedIn.getId()) : null;
         ClaimRequestDto updated = claimService.reviewClaim(id, status, adminNotes, qrVerificationResult, adminUser);
         return ResponseEntity.ok(updated);
@@ -81,8 +86,9 @@ public class ClaimController {
     @Operation(summary = "Admin mark item as physically returned to owner")
     public ResponseEntity<ClaimRequestDto> markItemReturned(@PathVariable Long id,
                                                            @RequestParam(required = false, defaultValue = "Item handed over to verified owner") String notes,
-                                                           HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+                                                           HttpSession session,
+                                                           HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         User adminUser = loggedIn != null ? userService.getUserEntityById(loggedIn.getId()) : null;
         ClaimRequestDto updated = claimService.markItemReturned(id, adminUser, notes);
         return ResponseEntity.ok(updated);

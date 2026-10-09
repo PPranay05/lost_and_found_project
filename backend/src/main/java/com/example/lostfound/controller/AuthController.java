@@ -5,8 +5,10 @@ import com.example.lostfound.dto.LoginRequest;
 import com.example.lostfound.dto.RegisterRequest;
 import com.example.lostfound.dto.UserDto;
 import com.example.lostfound.service.UserService;
+import com.example.lostfound.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +22,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
+    private final AuthUtil authUtil;
 
     @Autowired
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, AuthUtil authUtil) {
         this.userService = userService;
+        this.authUtil = authUtil;
     }
 
     @PostMapping("/register")
@@ -45,14 +49,16 @@ public class AuthController {
     @PostMapping("/logout")
     @Operation(summary = "Logout user and invalidate session")
     public ResponseEntity<AuthResponse> logout(HttpSession session) {
-        session.invalidate();
+        if (session != null) {
+            session.invalidate();
+        }
         return ResponseEntity.ok(new AuthResponse("Logged out successfully", null));
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Get currently authenticated user from session")
-    public ResponseEntity<UserDto> getCurrentUser(HttpSession session) {
-        UserDto loggedIn = (UserDto) session.getAttribute("LOGGED_IN_USER");
+    @Operation(summary = "Get currently authenticated user from session or headers")
+    public ResponseEntity<UserDto> getCurrentUser(HttpSession session, HttpServletRequest request) {
+        UserDto loggedIn = authUtil.getAuthenticatedUser(session, request);
         if (loggedIn == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
