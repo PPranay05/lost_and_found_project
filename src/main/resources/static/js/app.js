@@ -194,6 +194,34 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+// Helper: Copy text to clipboard with toast notification
+function copyToClipboard(text, successMsg = 'Copied to clipboard!') {
+  if (!text) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(successMsg, 'success');
+    }).catch(() => {
+      fallbackCopyText(text, successMsg);
+    });
+  } else {
+    fallbackCopyText(text, successMsg);
+  }
+}
+
+function fallbackCopyText(text, successMsg) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    showToast(successMsg, 'success');
+  } catch (err) {
+    showToast('Failed to copy', 'error');
+  }
+  document.body.removeChild(textarea);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initSession();
 });

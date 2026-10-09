@@ -55,9 +55,12 @@
 
           <div class="form-group">
             <label class="form-label">QR Code String / Item Code / QR ID</label>
-            <input type="text" id="manual-qr-code" class="form-control" placeholder="e.g. QR-1791... or FOUND-2001-XXXX" />
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" id="manual-qr-code" class="form-control" placeholder="e.g. QR-1791... or FOUND-2001-XXXX" style="flex:1;" />
+              <button type="button" onclick="copyToClipboard(document.getElementById('manual-qr-code').value, 'QR Code copied!')" class="btn btn-sm btn-secondary" title="Copy code">📋 Copy</button>
+            </div>
           </div>
-          <button type="button" onclick="submitManualQr()" class="btn btn-secondary" style="width:100%;">Verify QR Code</button>
+          <button type="button" onclick="submitManualQr()" class="btn btn-primary" style="width:100%;">Verify QR Code</button>
         </div>
       </div>
 
@@ -81,7 +84,7 @@
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const presetClaimId = urlParams.get('claimId');
-    const presetFoundCode = urlParams.get('foundCode');
+    const presetFoundCode = urlParams.get('foundCode') || urlParams.get('code') || urlParams.get('qrCode');
 
     document.addEventListener('DOMContentLoaded', () => {
       if (presetFoundCode) {
