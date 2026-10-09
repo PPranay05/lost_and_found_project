@@ -1,6 +1,9 @@
 /* Global Application Helper JS */
 
-const API_BASE = '/api';
+// Dynamic Backend API Base URL configuration
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const RENDER_BACKEND_URL = window.RENDER_BACKEND_URL || 'https://lost-found-portal.onrender.com';
+const API_BASE = IS_LOCAL ? '/api' : `${RENDER_BACKEND_URL}/api`;
 
 // Current session user object
 let currentUser = null;
