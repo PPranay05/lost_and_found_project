@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Lost Item - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content" style="max-width:800px;">
+    <div class="card" style="padding:2.5rem;">
+      <div style="margin-bottom:2rem;">
+        <h2>Report a Lost Item</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem;">Fill in detailed information to help identify and recover your missing item</p>
+      </div>
+
+      <form id="report-lost-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="itemName">Item Name *</label>
+            <input type="text" id="itemName" class="form-control" required placeholder="e.g. Black Leather Wallet" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="category">Category *</label>
+            <select id="category" class="form-control" required>
+              <option value="">Select Category</option>
+              <option value="Wallets">Wallets & Purses</option>
+              <option value="Electronics">Electronics & Laptops</option>
+              <option value="Wearables">Smartwatches & Accessories</option>
+              <option value="Keys">Keys & Keychains</option>
+              <option value="Bags">Bags & Backpacks</option>
+              <option value="Documents">ID Cards & Documents</option>
+              <option value="Clothing">Clothing & Apparel</option>
+              <option value="Other">Other Items</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Item Description *</label>
+          <textarea id="description" class="form-control" required placeholder="Provide a detailed description of the item, contents, or condition..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="dateLost">Date Lost *</label>
+            <input type="date" id="dateLost" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="timeLost">Approximate Time Lost</label>
+            <input type="time" id="timeLost" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="locationLost">Location Lost *</label>
+            <input type="text" id="locationLost" class="form-control" required placeholder="e.g. Central Library 2nd Floor" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="color">Primary Color</label>
+            <input type="text" id="color" class="form-control" placeholder="e.g. Black, Silver, Navy" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="brand">Brand / Manufacturer</label>
+            <input type="text" id="brand" class="form-control" placeholder="e.g. Apple, Dell, Fossil, Samsonite" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="contactInfo">Contact Information</label>
+            <input type="text" id="contactInfo" class="form-control" placeholder="Phone or email for contact" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="characteristics">Unique Identifying Characteristics</label>
+          <input type="text" id="characteristics" class="form-control" placeholder="e.g. Engraved initials, sticker on corner, scratch mark..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="imageUrl">Photo Image URL (Optional)</label>
+          <input type="url" id="imageUrl" class="form-control" placeholder="https://example.com/item-photo.jpg" />
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:2rem;">
+          <a href="user-dashboard.html" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">Submit Lost Item Report</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await requireAuth();
+      if (!user) return;
+      document.getElementById('dateLost').valueAsDate = new Date();
+    });
+
+    document.getElementById('report-lost-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        itemName: document.getElementById('itemName').value.trim(),
+        category: document.getElementById('category').value,
+        description: document.getElementById('description').value.trim(),
+        dateLost: document.getElementById('dateLost').value,
+        timeLost: document.getElementById('timeLost').value || null,
+        locationLost: document.getElementById('locationLost').value.trim(),
+        color: document.getElementById('color').value.trim(),
+        brand: document.getElementById('brand').value.trim(),
+        characteristics: document.getElementById('characteristics').value.trim(),
+        contactInfo: document.getElementById('contactInfo').value.trim(),
+        imageUrl: document.getElementById('imageUrl').value.trim()
+      };
+
+      try {
+        const res = await fetchApi('/lost-items', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        showToast(`Report submitted successfully! Item Code: ${res.lostItemIdCode}`, 'success');
+        setTimeout(() => {
+          window.location.href = currentUser && currentUser.role === 'ADMIN' ? 'admin-dashboard.html' : 'user-dashboard.html';
+        }, 1000);
+      } catch (err) {}
+    });
+  </script>
+</body>
+</html>

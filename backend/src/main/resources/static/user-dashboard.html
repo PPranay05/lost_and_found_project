@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <h1 id="welcome-heading">User Dashboard</h1>
+        <p style="color:var(--text-muted);">Track your lost item reports, registered found items, and claim requests</p>
+      </div>
+      <div style="display:flex; gap:0.75rem;">
+        <a href="report-lost.html" class="btn btn-primary">➕ Report Lost Item</a>
+        <a href="register-found.html" class="btn btn-success">📦 Register Found Item</a>
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('lost-reports')">My Lost Reports</button>
+      <button class="tab-btn" onclick="switchTab('found-reports')">My Found Reports</button>
+      <button class="tab-btn" onclick="switchTab('my-claims')">My Claims</button>
+      <button class="tab-btn" onclick="switchTab('matches')">Matched Items</button>
+      <button class="tab-btn" onclick="switchTab('returned')">Returned Items</button>
+      <button class="tab-btn" onclick="switchTab('activity')">Recent Activity</button>
+    </div>
+
+    <!-- Tab 1: My Lost Reports -->
+    <div id="tab-lost-reports" class="tab-content active">
+      <div id="lost-reports-list" class="items-grid">Loading your lost item reports...</div>
+    </div>
+
+    <!-- Tab 2: My Found Reports -->
+    <div id="tab-found-reports" class="tab-content">
+      <div id="found-reports-list" class="items-grid">Loading your found item reports...</div>
+    </div>
+
+    <!-- Tab 3: My Claims -->
+    <div id="tab-my-claims" class="tab-content">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Claim Code</th>
+              <th>Found Item</th>
+              <th>Date Submitted</th>
+              <th>Status</th>
+              <th>QR Verification</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="claims-table-body">
+            <tr><td colspan="6" style="text-align:center;">Loading claims...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Potential Matches -->
+    <div id="tab-matches" class="tab-content">
+      <div id="matches-container">
+        <p style="color:var(--text-muted); margin-bottom:1rem;">Smart correlation matches based on category, title, date, location, and color similarity</p>
+        <div id="matches-grid" style="display:flex; flex-direction:column; gap:1rem;">Loading matches...</div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Returned Items -->
+    <div id="tab-returned" class="tab-content">
+      <div id="returned-grid" class="items-grid">Loading returned items...</div>
+    </div>
+
+    <!-- Tab 6: Recent Activity -->
+    <div id="tab-activity" class="tab-content">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Transaction Code</th>
+              <th>Action</th>
+              <th>Item Code</th>
+              <th>Status Shift</th>
+              <th>Date / Time</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="activity-table-body">
+            <tr><td colspan="6" style="text-align:center;">Loading user activity...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- QR Display Modal -->
+  <div id="qr-modal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:1000; width:90%; max-width:400px; text-align:center; padding:2rem; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+    <h3>Found Item QR Code</h3>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Attach this QR tag to the physical item for claim verification</p>
+    <img id="qr-modal-img" src="" alt="QR Code" style="width:200px; height:200px; margin:0 auto 1rem; border-radius:12px; background:#fff; padding:10px;" />
+    <div style="font-size:0.8rem; color:var(--text-subtle); margin-bottom:1.5rem;" id="qr-modal-code">--</div>
+    <div style="display:flex; gap:0.5rem; justify-content:center;">
+      <a id="qr-modal-download" href="#" class="btn btn-sm btn-primary" download>Download PNG</a>
+      <button onclick="closeQrModal()" class="btn btn-sm btn-secondary">Close</button>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+    }
+
+    async function loadDashboardData() {
+      const user = await requireAuth();
+      if (!user) return;
+
+      try {
+        document.getElementById('welcome-heading').innerText = `Welcome, ${user.fullName}`;
+
+        // 1. My Lost Items
+        const lost = await fetchApi('/lost-items/my');
+        const lostGrid = document.getElementById('lost-reports-list');
+        if (!lost || lost.length === 0) {
+          lostGrid.innerHTML = '<div class="card" style="grid-column:1/-1; text-align:center; padding:2rem;">No lost items reported yet.</div>';
+        } else {
+          lostGrid.innerHTML = lost.map(item => `
+            <div class="card item-card">
+              <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60'}" class="item-card-img" />
+              <div class="item-card-header">
+                <span class="item-title">${escapeHtml(item.itemName)}</span>
+                ${getStatusBadge(item.status)}
+              </div>
+              <div class="item-meta">
+                <span class="meta-tag">🏷️ ${escapeHtml(item.category)}</span>
+                <span class="meta-tag">📍 ${escapeHtml(item.locationLost)}</span>
+                <span class="meta-tag">📅 ${item.dateLost}</span>
+              </div>
+              <div style="margin-top:auto; font-size:0.8rem; color:var(--text-subtle);">Code: ${item.lostItemIdCode}</div>
+            </div>
+          `).join('');
+        }
+
+        // 2. My Found Items
+        const found = await fetchApi('/found-items/my');
+        const foundGrid = document.getElementById('found-reports-list');
+        if (!found || found.length === 0) {
+          foundGrid.innerHTML = '<div class="card" style="grid-column:1/-1; text-align:center; padding:2rem;">No found items registered yet.</div>';
+        } else {
+          foundGrid.innerHTML = found.map(item => `
+            <div class="card item-card">
+              <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60'}" class="item-card-img" />
+              <div class="item-card-header">
+                <span class="item-title">${escapeHtml(item.itemName)}</span>
+                ${getStatusBadge(item.status)}
+              </div>
+              <div class="item-meta">
+                <span class="meta-tag">🏷️ ${escapeHtml(item.category)}</span>
+                <span class="meta-tag">📍 ${escapeHtml(item.locationFound)}</span>
+                <span class="meta-tag">📅 ${item.dateFound}</span>
+              </div>
+              <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.75rem; color:var(--text-subtle);">${item.foundItemIdCode}</span>
+                <button onclick="showQrModal('${item.qrCodeImageBase64}', '${item.qrCodeId}', ${item.id})" class="btn btn-sm btn-secondary">📱 QR Code</button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // 3. My Claims
+        const claims = await fetchApi('/claims/my');
+        const claimBody = document.getElementById('claims-table-body');
+        if (!claims || claims.length === 0) {
+          claimBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:1.5rem;">No claims submitted yet.</td></tr>';
+        } else {
+          claimBody.innerHTML = claims.map(c => `
+            <tr>
+              <td><strong>${c.claimIdCode}</strong></td>
+              <td>${escapeHtml(c.foundItemName)} (${c.foundItemCode})</td>
+              <td>${c.createdAt ? c.createdAt.split('T')[0] : ''}</td>
+              <td>${getStatusBadge(c.status)}</td>
+              <td><span style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(c.qrVerificationResult || 'Pending QR Scan')}</span></td>
+              <td><a href="claim-status.html" class="btn btn-sm btn-secondary">Track</a></td>
+            </tr>
+          `).join('');
+        }
+
+        // 4. Matches
+        const matches = await fetchApi('/items/matches');
+        const matchesGrid = document.getElementById('matches-grid');
+        if (!matches || matches.length === 0) {
+          matchesGrid.innerHTML = '<div class="card" style="text-align:center; padding:2rem;">No matching item correlation found at present.</div>';
+        } else {
+          matchesGrid.innerHTML = matches.map(m => `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+              <div>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
+                  <span class="badge badge-matched">Match Score: ${m.matchPercentage}%</span>
+                  <span style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(m.matchReason)}</span>
+                </div>
+                <div><strong>Lost:</strong> ${escapeHtml(m.lostItem.itemName)} (${m.lostItem.lostItemIdCode}) ↔ <strong>Found:</strong> ${escapeHtml(m.foundItem.itemName)} (${m.foundItem.foundItemIdCode})</div>
+              </div>
+              <a href="claim-item.html?foundId=${m.foundItem.id}&lostId=${m.lostItem.id}" class="btn btn-sm btn-primary">Submit Claim</a>
+            </div>
+          `).join('');
+        }
+
+        // 5. Returned Items
+        const allFound = await fetchApi('/found-items');
+        const returned = allFound.filter(i => i.status === 'RETURNED');
+        const returnedGrid = document.getElementById('returned-grid');
+        if (!returned || returned.length === 0) {
+          returnedGrid.innerHTML = '<div class="card" style="grid-column:1/-1; text-align:center; padding:2rem;">No items marked as returned yet.</div>';
+        } else {
+          returnedGrid.innerHTML = returned.map(item => `
+            <div class="card item-card">
+              <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60'}" class="item-card-img" />
+              <div class="item-card-header">
+                <span class="item-title">${escapeHtml(item.itemName)}</span>
+                ${getStatusBadge(item.status)}
+              </div>
+              <div class="item-meta">
+                <span class="meta-tag">📍 ${escapeHtml(item.locationFound)}</span>
+                <span class="meta-tag">📅 ${item.dateFound}</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // 6. User Activity
+        const txns = await fetchApi('/transactions/my');
+        const actBody = document.getElementById('activity-table-body');
+        if (!txns || txns.length === 0) {
+          actBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:1.5rem;">No recent activity logs.</td></tr>';
+        } else {
+          actBody.innerHTML = txns.map(t => `
+            <tr>
+              <td><code>${t.transactionCode}</code></td>
+              <td><strong>${escapeHtml(t.action)}</strong></td>
+              <td>${escapeHtml(t.itemCode)}</td>
+              <td>${t.previousStatus || 'NEW'} → ${t.newStatus}</td>
+              <td>${t.timestamp ? t.timestamp.replace('T', ' ').substring(0, 19) : ''}</td>
+              <td style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(t.notes)}</td>
+            </tr>
+          `).join('');
+        }
+
+      } catch (err) {}
+    }
+
+    function showQrModal(base64, qrId, itemId) {
+      document.getElementById('qr-modal-img').src = base64;
+      document.getElementById('qr-modal-code').innerText = `QR ID: ${qrId}`;
+      document.getElementById('qr-modal-download').href = `/api/qr/image/${itemId}`;
+      document.getElementById('qr-modal').style.display = 'block';
+    }
+
+    function closeQrModal() {
+      document.getElementById('qr-modal').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDashboardData);
+  </script>
+</body>
+</html>

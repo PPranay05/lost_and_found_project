@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Verification - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content" style="max-width:960px;">
+    <div style="margin-bottom:2rem;">
+      <h1>QR Code Item Verification</h1>
+      <p style="color:var(--text-muted);">Scan physical QR code tag attached to found item to authenticate ownership and complete handover</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+      <!-- Scanner Controls Box -->
+      <div>
+        <div class="card" style="padding:1.5rem; margin-bottom:1.5rem;">
+          <h3 style="margin-bottom:1rem;">1. Live Camera Scanner</h3>
+          <div class="qr-scanner-box" style="margin-bottom:1rem;">
+            <video id="qr-video"></video>
+            <div class="scanner-laser"></div>
+            <div id="camera-placeholder" style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1rem;">
+              Click 'Start Camera' to initialize device scanner
+            </div>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" onclick="startCamera()" class="btn btn-sm btn-primary" style="flex:1;">📷 Start Camera</button>
+            <button type="button" onclick="stopCamera()" class="btn btn-sm btn-secondary">🛑 Stop</button>
+          </div>
+        </div>
+
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-bottom:1rem;">2. Manual / File Upload Fallback</h3>
+          
+          <div class="form-group">
+            <label class="form-label">Upload QR Code Image File</label>
+            <input type="file" id="qr-file-input" accept="image/*" class="form-control" onchange="uploadQrImage()" />
+          </div>
+
+          <div style="text-align:center; font-size:0.8rem; color:var(--text-subtle); margin:0.75rem 0;">— OR ENTER MANUALLY —</div>
+
+          <div class="form-group">
+            <label class="form-label">QR Code String / Item Code / QR ID</label>
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" id="manual-qr-code" class="form-control" placeholder="e.g. QR-1791... or FOUND-2001-XXXX" style="flex:1;" />
+              <button type="button" onclick="copyToClipboard(document.getElementById('manual-qr-code').value, 'QR Code copied!')" class="btn btn-sm btn-secondary" title="Copy code">📋 Copy</button>
+            </div>
+          </div>
+          <button type="button" onclick="submitManualQr()" class="btn btn-primary" style="width:100%;">Verify QR Code</button>
+        </div>
+      </div>
+
+      <!-- Verification Results Box -->
+      <div>
+        <div class="card" style="padding:2rem; min-height:100%;">
+          <h3>Verification & Cross-Check Result</h3>
+          <div id="verification-result-container" style="margin-top:1.5rem;">
+            <div style="text-align:center; color:var(--text-muted); padding:3rem 1rem;">
+              <div style="font-size:3rem; margin-bottom:1rem;">📱</div>
+              Scan a physical QR code, upload an image file, or enter a QR ID / Item Code on the left to verify item authenticity.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script src="js/qr-scanner.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const presetClaimId = urlParams.get('claimId');
+    const presetFoundCode = urlParams.get('foundCode') || urlParams.get('code') || urlParams.get('qrCode');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (presetFoundCode) {
+        document.getElementById('manual-qr-code').value = presetFoundCode;
+        submitManualQr();
+      }
+    });
+
+    function startCamera() {
+      document.getElementById('camera-placeholder').style.display = 'none';
+      startQrCamera('qr-video', displayVerificationResult);
+    }
+
+    function stopCamera() {
+      stopQrCamera('qr-video');
+      document.getElementById('camera-placeholder').style.display = 'block';
+    }
+
+    function uploadQrImage() {
+      const input = document.getElementById('qr-file-input');
+      handleQrFileUpload(input, displayVerificationResult);
+    }
+
+    function submitManualQr() {
+      const val = document.getElementById('manual-qr-code').value.trim();
+      verifyManualQrCode(val, presetClaimId ? parseInt(presetClaimId) : null, displayVerificationResult);
+    }
+
+    function displayVerificationResult(res) {
+      const container = document.getElementById('verification-result-container');
+      if (!res.valid) {
+        container.innerHTML = `
+          <div class="card" style="background:rgba(244, 63, 94, 0.1); border:1px solid rgba(244, 63, 94, 0.4); padding:1.5rem; text-align:center;">
+            <div style="font-size:2.5rem; color:#f43f5e; margin-bottom:0.5rem;">⚠️ VERIFICATION FAILED</div>
+            <h4 style="color:#fda4af;">Invalid or Fraudulent QR Code</h4>
+            <p style="font-size:0.9rem; color:var(--text-muted); margin-top:0.5rem;">${escapeHtml(res.message)}</p>
+            <div style="font-size:0.75rem; color:var(--text-subtle); margin-top:1rem;">Timestamp: ${res.verificationTimestamp}</div>
+          </div>
+        `;
+        return;
+      }
+
+      const item = res.foundItem;
+      const claim = res.claim;
+      const claimant = res.claimant;
+
+      let claimInfoHtml = `
+        <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+          <div style="font-size:0.85rem; color:var(--text-subtle); margin-bottom:1rem;">No active ownership claim submitted yet for this item.</div>
+          <a href="admin-dashboard.html" class="btn btn-sm btn-secondary">Go to Admin Dashboard</a>
+        </div>
+      `;
+
+      if (claim) {
+        const isPending = claim.status === 'PENDING' || claim.status === 'UNDER_REVIEW';
+        claimInfoHtml = `
+          <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+              <h4 style="color:var(--accent-cyan);">Cross-Check Claimant Info</h4>
+              ${getStatusBadge(claim.status)}
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9rem;">
+              <div><strong>Claim Code:</strong> <code>${claim.claimIdCode}</code></div>
+              <div><strong>Claimant Name:</strong> ${escapeHtml(claim.claimantName)}</div>
+              <div><strong>Contact Details:</strong> ${escapeHtml(claim.contactDetails)}</div>
+              <div><strong>Claimant ID:</strong> ${claimant ? escapeHtml(claimant.studentEmpId) : 'N/A'}</div>
+              <div><strong>Ownership Description:</strong> ${escapeHtml(claim.itemDescription)}</div>
+              <div><strong>Identifying Marks:</strong> ${escapeHtml(claim.identifyingDetails || 'None provided')}</div>
+            </div>
+
+            <div class="form-group" style="margin-top:1.25rem;">
+              <label class="form-label">Administrator Notes / Feedback</label>
+              <textarea id="admin-notes" class="form-control" placeholder="Enter verification notes...">${escapeHtml(claim.adminNotes || '')}</textarea>
+            </div>
+
+            <div style="display:flex; gap:0.75rem; margin-top:1rem;">
+              <button type="button" onclick="processClaimDecision(${claim.id}, 'APPROVED')" class="btn btn-success" style="flex:1;">✅ Approve Claim & Mark Claimed</button>
+              <button type="button" onclick="processClaimDecision(${claim.id}, 'REJECTED')" class="btn btn-danger">❌ Reject Claim</button>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="card" style="background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.3); padding:1.5rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
+            <div style="font-size:1.5rem;">✅</div>
+            <div>
+              <h4 style="color:#6ee7b7;">QR Code Authenticated</h4>
+              <div style="font-size:0.75rem; color:var(--text-subtle);">Verified at ${res.verificationTimestamp}</div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem;">
+            <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60'}" style="width:70px; height:70px; object-fit:cover; border-radius:8px;" />
+            <div>
+              <strong style="font-size:1.05rem;">${escapeHtml(item.itemName)}</strong>
+              <div style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(item.category)} • ${escapeHtml(item.locationFound)}</div>
+              <div>Item Code: <code>${item.foundItemIdCode}</code> | QR ID: <code>${res.qrCodeId}</code></div>
+            </div>
+          </div>
+
+          ${claimInfoHtml}
+        </div>
+      `;
+    }
+
+    async function processClaimDecision(claimId, decision) {
+      const notes = document.getElementById('admin-notes') ? document.getElementById('admin-notes').value.trim() : 'Verified via QR Code scan';
+      try {
+        await fetchApi(`/claims/${claimId}/review?status=${decision}&adminNotes=${encodeURIComponent(notes)}&qrVerificationResult=${encodeURIComponent('QR Authenticated & Scanned')}`, {
+          method: 'PUT'
+        });
+
+        showToast(`Claim has been ${decision}! Status updated.`, decision === 'APPROVED' ? 'success' : 'error');
+        setTimeout(() => {
+          window.location.href = 'admin-dashboard.html';
+        }, 1000);
+      } catch (err) {}
+    }
+  </script>
+</body>
+</html>

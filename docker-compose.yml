@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    build: ./backend
     container_name: lost-found-app
     ports:
       - "8080:8080"

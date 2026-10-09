@@ -3,14 +3,14 @@
   "public": true,
   "builds": [
     {
-      "src": "src/main/resources/static/**",
+      "src": "frontend/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "src/main/resources/static/$1"
+      "dest": "frontend/$1"
     }
   ]
 }

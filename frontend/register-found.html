@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Found Item - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content" style="max-width:800px;">
+    <div class="card" style="padding:2.5rem;">
+      <div style="margin-bottom:2rem;">
+        <h2>Register a Found Item</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem;">Register a recovered item. The system will automatically generate a unique QR Code tag.</p>
+      </div>
+
+      <form id="register-found-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="itemName">Item Name *</label>
+            <input type="text" id="itemName" class="form-control" required placeholder="e.g. Dell XPS Laptop Bag" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="category">Category *</label>
+            <select id="category" class="form-control" required>
+              <option value="">Select Category</option>
+              <option value="Wallets">Wallets & Purses</option>
+              <option value="Electronics">Electronics & Laptops</option>
+              <option value="Wearables">Smartwatches & Accessories</option>
+              <option value="Keys">Keys & Keychains</option>
+              <option value="Bags">Bags & Backpacks</option>
+              <option value="Documents">ID Cards & Documents</option>
+              <option value="Clothing">Clothing & Apparel</option>
+              <option value="Other">Other Items</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Found Item Description *</label>
+          <textarea id="description" class="form-control" required placeholder="Describe condition, location specifics, contents..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="dateFound">Date Found *</label>
+            <input type="date" id="dateFound" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="timeFound">Time Found</label>
+            <input type="time" id="timeFound" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="locationFound">Location Found *</label>
+            <input type="text" id="locationFound" class="form-control" required placeholder="e.g. Science Building Hallway" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="color">Color</label>
+            <input type="text" id="color" class="form-control" placeholder="e.g. Black, Silver" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="brand">Brand</label>
+            <input type="text" id="brand" class="form-control" placeholder="e.g. Dell, Apple, Fossil" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="imageUrl">Photo Image URL</label>
+            <input type="url" id="imageUrl" class="form-control" placeholder="https://example.com/photo.jpg" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="characteristics">Identifying Characteristics</label>
+          <input type="text" id="characteristics" class="form-control" placeholder="Key details to cross-check ownership claims..." />
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:2rem;">
+          <a href="user-dashboard.html" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-success">Register Found Item & Generate QR Code</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Generated QR Code Modal -->
+  <div id="qr-success-modal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:1000; width:90%; max-width:440px; text-align:center; padding:2rem; box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+    <div style="font-size:2rem; margin-bottom:0.5rem;">🎉</div>
+    <h3>Found Item Registered!</h3>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">A unique QR Code has been generated for verification</p>
+    
+    <img id="modal-qr-img" src="" style="width:220px; height:220px; border-radius:12px; background:#fff; padding:10px; margin:0 auto 1rem;" />
+    
+    <div style="font-size:0.8rem; color:var(--text-subtle); margin-bottom:1.5rem;" id="modal-qr-id">--</div>
+    
+    <div style="display:flex; gap:0.5rem; justify-content:center;">
+      <a id="modal-qr-dl" href="#" class="btn btn-primary" download>Download QR PNG</a>
+      <button onclick="finishRegistration()" class="btn btn-secondary">Go to Dashboard</button>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await requireAuth();
+      if (!user) return;
+      document.getElementById('dateFound').valueAsDate = new Date();
+    });
+
+    document.getElementById('register-found-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        itemName: document.getElementById('itemName').value.trim(),
+        category: document.getElementById('category').value,
+        description: document.getElementById('description').value.trim(),
+        dateFound: document.getElementById('dateFound').value,
+        timeFound: document.getElementById('timeFound').value || null,
+        locationFound: document.getElementById('locationFound').value.trim(),
+        color: document.getElementById('color').value.trim(),
+        brand: document.getElementById('brand').value.trim(),
+        characteristics: document.getElementById('characteristics').value.trim(),
+        imageUrl: document.getElementById('imageUrl').value.trim()
+      };
+
+      try {
+        const res = await fetchApi('/found-items', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        showToast('Found item registered with automatic QR generation!', 'success');
+        
+        document.getElementById('modal-qr-img').src = res.qrCodeImageBase64;
+        document.getElementById('modal-qr-id').innerText = `QR ID: ${res.qrCodeId} | Item Code: ${res.foundItemIdCode}`;
+        document.getElementById('modal-qr-dl').href = `/api/qr/image/${res.id}`;
+        document.getElementById('qr-success-modal').style.display = 'block';
+
+      } catch (err) {}
+    });
+
+    function finishRegistration() {
+      window.location.href = currentUser && currentUser.role === 'ADMIN' ? 'admin-dashboard.html' : 'user-dashboard.html';
+    }
+  </script>
+</body>
+</html>

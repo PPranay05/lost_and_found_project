@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Listings - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="margin-bottom:2rem;">
+      <h1>Search Lost & Found Listings</h1>
+      <p style="color:var(--text-muted);">Multi-criteria search by keyword, category, location, date, status, or item type</p>
+    </div>
+
+    <!-- Search Controls Card -->
+    <div class="card" style="margin-bottom:2rem; padding:1.5rem;">
+      <form id="search-form">
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">Keyword Search</label>
+            <input type="text" id="query" class="form-control" placeholder="Search item name, brand, description, or code..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Item Type</label>
+            <select id="type" class="form-control">
+              <option value="ALL">All Items (Lost & Found)</option>
+              <option value="FOUND">Found Items Only</option>
+              <option value="LOST">Lost Items Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="category" class="form-control">
+              <option value="ALL">All Categories</option>
+              <option value="Wallets">Wallets & Purses</option>
+              <option value="Electronics">Electronics & Laptops</option>
+              <option value="Wearables">Smartwatches & Wearables</option>
+              <option value="Keys">Keys & Keychains</option>
+              <option value="Bags">Bags & Backpacks</option>
+              <option value="Documents">ID Cards & Documents</option>
+              <option value="Clothing">Clothing & Apparel</option>
+              <option value="Other">Other Items</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" id="location" class="form-control" placeholder="e.g. Library, Science Block..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" id="date" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="status" class="form-control">
+              <option value="ALL">All Statuses</option>
+              <option value="REPORTED">REPORTED</option>
+              <option value="MATCHED">MATCHED</option>
+              <option value="CLAIMED">CLAIMED</option>
+              <option value="RETURNED">RETURNED</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+          <button type="button" onclick="resetSearch()" class="btn btn-secondary">Reset Filters</button>
+          <button type="submit" class="btn btn-primary">🔍 Search Listings</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Results Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <h3 id="results-count">Results (0)</h3>
+    </div>
+
+    <!-- Results Grid -->
+    <div id="results-grid" class="items-grid">
+      <div class="card" style="grid-column:1/-1; text-align:center; padding:3rem;">Loading listings...</div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    document.getElementById('search-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      executeSearch();
+    });
+
+    function resetSearch() {
+      document.getElementById('query').value = '';
+      document.getElementById('type').value = 'ALL';
+      document.getElementById('category').value = 'ALL';
+      document.getElementById('location').value = '';
+      document.getElementById('date').value = '';
+      document.getElementById('status').value = 'ALL';
+      executeSearch();
+    }
+
+    async function executeSearch() {
+      const query = document.getElementById('query').value.trim();
+      const type = document.getElementById('type').value;
+      const category = document.getElementById('category').value;
+      const location = document.getElementById('location').value.trim();
+      const date = document.getElementById('date').value;
+      const status = document.getElementById('status').value;
+
+      try {
+        const data = await fetchApi('/items/search', {
+          method: 'POST',
+          body: JSON.stringify({ query, type, category, location, date: date || null, status })
+        });
+
+        const grid = document.getElementById('results-grid');
+        const countHeader = document.getElementById('results-count');
+        countHeader.innerText = `Results (${data.totalResults || 0})`;
+
+        let cardsHtml = '';
+
+        // Found Items
+        if (data.foundItems && data.foundItems.length > 0) {
+          cardsHtml += data.foundItems.map(item => `
+            <div class="card item-card">
+              <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60'}" class="item-card-img" />
+              <div class="item-card-header">
+                <div>
+                  <span class="badge badge-type-found" style="margin-bottom:0.25rem;">FOUND</span>
+                  <div class="item-title">${escapeHtml(item.itemName)}</div>
+                </div>
+                ${getStatusBadge(item.status)}
+              </div>
+              <div class="item-meta">
+                <span class="meta-tag">🏷️ ${escapeHtml(item.category)}</span>
+                <span class="meta-tag">📍 ${escapeHtml(item.locationFound)}</span>
+                <span class="meta-tag">📅 ${item.dateFound}</span>
+              </div>
+              <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.75rem; color:var(--text-subtle);">${item.foundItemIdCode}</span>
+                <a href="item-details.html?type=found&id=${item.id}" class="btn btn-sm btn-primary">Details & Claim</a>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Lost Items
+        if (data.lostItems && data.lostItems.length > 0) {
+          cardsHtml += data.lostItems.map(item => `
+            <div class="card item-card">
+              <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60'}" class="item-card-img" />
+              <div class="item-card-header">
+                <div>
+                  <span class="badge badge-type-lost" style="margin-bottom:0.25rem;">LOST</span>
+                  <div class="item-title">${escapeHtml(item.itemName)}</div>
+                </div>
+                ${getStatusBadge(item.status)}
+              </div>
+              <div class="item-meta">
+                <span class="meta-tag">🏷️ ${escapeHtml(item.category)}</span>
+                <span class="meta-tag">📍 ${escapeHtml(item.locationLost)}</span>
+                <span class="meta-tag">📅 ${item.dateLost}</span>
+              </div>
+              <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.75rem; color:var(--text-subtle);">${item.lostItemIdCode}</span>
+                <a href="item-details.html?type=lost&id=${item.id}" class="btn btn-sm btn-secondary">View Details</a>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        if (!cardsHtml) {
+          grid.innerHTML = '<div class="card" style="grid-column:1/-1; text-align:center; padding:3rem;">No listings found matching your search criteria.</div>';
+        } else {
+          grid.innerHTML = cardsHtml;
+        }
+
+      } catch (err) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', executeSearch);
+  </script>
+</body>
+</html>
