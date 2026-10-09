@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction History - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="margin-bottom:2rem;">
+      <h1>Transaction & Recovery History</h1>
+      <p style="color:var(--text-muted);">Complete audit trail of all item reports, status updates, QR verifications, and claim approvals</p>
+    </div>
+
+    <div class="card" style="padding:1.5rem; margin-bottom:1.5rem;">
+      <div class="form-row" style="align-items:flex-end;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Filter by Item Code</label>
+          <input type="text" id="filter-code" class="form-control" placeholder="e.g. FOUND-2001 or LOST-1001" />
+        </div>
+        <button type="button" onclick="loadTransactions()" class="btn btn-primary">Filter Logs</button>
+        <button type="button" onclick="document.getElementById('filter-code').value=''; loadTransactions();" class="btn btn-secondary">Clear Filter</button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Txn Code</th>
+            <th>Type</th>
+            <th>Item Code</th>
+            <th>Action</th>
+            <th>Responsible User</th>
+            <th>Status Change</th>
+            <th>QR Verification Result</th>
+            <th>Date & Time</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="txn-table-body">
+          <tr><td colspan="9" style="text-align:center;">Loading audit transaction log...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    async function loadTransactions() {
+      const code = document.getElementById('filter-code').value.trim();
+      const endpoint = code ? `/transactions/item/${code}` : '/transactions';
+
+      try {
+        const txns = await fetchApi(endpoint);
+        const tbody = document.getElementById('txn-table-body');
+
+        if (!txns || txns.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem;">No transaction logs found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = txns.map(t => `
+          <tr>
+            <td><code>${t.transactionCode}</code></td>
+            <td><span class="badge ${t.itemType === 'LOST' ? 'badge-type-lost' : 'badge-type-found'}">${t.itemType || 'N/A'}</span></td>
+            <td><strong>${escapeHtml(t.itemCode)}</strong></td>
+            <td>${escapeHtml(t.action)}</td>
+            <td>${escapeHtml(t.adminOrUserResponsible || t.userName || 'System')}</td>
+            <td>${t.previousStatus || 'INIT'} → <strong>${t.newStatus}</strong></td>
+            <td><span style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(t.qrVerificationResult || 'N/A')}</span></td>
+            <td>${t.timestamp ? t.timestamp.replace('T', ' ').substring(0, 19) : ''}</td>
+            <td style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(t.notes || '')}</td>
+          </tr>
+        `).join('');
+
+      } catch (err) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', loadTransactions);
+  </script>
+</body>
+</html>

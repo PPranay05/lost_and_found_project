@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Claim - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content" style="max-width:760px;">
+    <div class="card" style="padding:2.5rem;">
+      <div style="margin-bottom:2rem;">
+        <h2>Submit Ownership Claim</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem;">Provide proof and details to verify your ownership of the found item</p>
+      </div>
+
+      <!-- Item Preview Summary -->
+      <div id="item-summary" class="card" style="margin-bottom:1.5rem; background:rgba(17, 24, 39, 0.9); padding:1rem 1.25rem;">
+        Loading item info...
+      </div>
+
+      <form id="claim-form">
+        <input type="hidden" id="foundItemId" />
+        <input type="hidden" id="lostItemId" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="claimantName">Claimant Full Name *</label>
+            <input type="text" id="claimantName" class="form-control" required placeholder="John Doe" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="contactDetails">Contact Details *</label>
+            <input type="text" id="contactDetails" class="form-control" required placeholder="Phone / Email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="itemDescription">Ownership Description & Item Details *</label>
+          <textarea id="itemDescription" class="form-control" required placeholder="Describe the item, where and when you lost it, contents inside..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="identifyingDetails">Unique Identifying Marks / Features</label>
+          <input type="text" id="identifyingDetails" class="form-control" placeholder="e.g. Serial numbers, scratches, specific stickers, photos inside..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="proofDetails">Additional Proof / Receipt / Reference</label>
+          <textarea id="proofDetails" class="form-control" placeholder="Mention purchase receipt details, password lock code description, or linked lost report code..."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:2rem;">
+          <a href="search.html" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">Submit Ownership Claim</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const foundId = urlParams.get('foundId');
+    const lostId = urlParams.get('lostId');
+
+    async function initClaimForm() {
+      if (!foundId) {
+        showToast('No found item selected for claim', 'error');
+        setTimeout(() => window.location.href = 'search.html', 1500);
+        return;
+      }
+
+      document.getElementById('foundItemId').value = foundId;
+      if (lostId) document.getElementById('lostItemId').value = lostId;
+
+      try {
+        const item = await fetchApi(`/found-items/${foundId}`);
+        document.getElementById('item-summary').innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:0.8rem; color:var(--text-subtle);">Claiming Found Item:</div>
+              <strong style="font-size:1.1rem; color:var(--text-main);">${escapeHtml(item.itemName)}</strong>
+              <div style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(item.category)} • ${escapeHtml(item.locationFound)}</div>
+            </div>
+            <div><code>${item.foundItemIdCode}</code></div>
+          </div>
+        `;
+
+        const user = await fetchApi('/auth/me');
+        if (user) {
+          document.getElementById('claimantName').value = user.fullName || '';
+          document.getElementById('contactDetails').value = `${user.email} | ${user.phoneNumber || ''}`;
+        }
+      } catch (err) {}
+    }
+
+    document.getElementById('claim-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        foundItemId: parseInt(document.getElementById('foundItemId').value),
+        lostItemId: document.getElementById('lostItemId').value ? parseInt(document.getElementById('lostItemId').value) : null,
+        claimantName: document.getElementById('claimantName').value.trim(),
+        contactDetails: document.getElementById('contactDetails').value.trim(),
+        itemDescription: document.getElementById('itemDescription').value.trim(),
+        identifyingDetails: document.getElementById('identifyingDetails').value.trim(),
+        proofDetails: document.getElementById('proofDetails').value.trim()
+      };
+
+      try {
+        const res = await fetchApi('/claims', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        showToast(`Ownership claim submitted! Claim Code: ${res.claimIdCode}`, 'success');
+        setTimeout(() => {
+          window.location.href = 'claim-status.html';
+        }, 1000);
+      } catch (err) {}
+    });
+
+    document.addEventListener('DOMContentLoaded', initClaimForm);
+  </script>
+</body>
+</html>

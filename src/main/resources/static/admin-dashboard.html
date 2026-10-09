@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <h1>Administrator Portal</h1>
+        <p style="color:var(--text-muted);">Manage system records, verify ownership claims, scan QR codes, and approve item returns</p>
+      </div>
+      <div style="display:flex; gap:0.75rem;">
+        <a href="qr-verification.html" class="btn btn-primary">📱 Open QR Scanner</a>
+        <a href="transaction-history.html" class="btn btn-secondary">📜 View Audit Log</a>
+      </div>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div>
+          <div class="stat-value" id="adm-users">--</div>
+          <div class="stat-label">Total Users</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(244, 63, 94, 0.15); color:#fda4af;">📋</div>
+        <div>
+          <div class="stat-value" id="adm-lost">--</div>
+          <div class="stat-label">Lost Reports</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(16, 185, 129, 0.15); color:#6ee7b7;">📦</div>
+        <div>
+          <div class="stat-value" id="adm-found">--</div>
+          <div class="stat-label">Found Records</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(245, 158, 11, 0.15); color:#fcd34d;">⌛</div>
+        <div>
+          <div class="stat-value" id="adm-claims">--</div>
+          <div class="stat-label">Pending Claims</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(168, 85, 247, 0.15); color:#d8b4fe;">🔗</div>
+        <div>
+          <div class="stat-value" id="adm-matched">--</div>
+          <div class="stat-label">Matched Items</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(6, 182, 212, 0.15); color:#67e8f9;">✅</div>
+        <div>
+          <div class="stat-value" id="adm-claimed">--</div>
+          <div class="stat-label">Claimed Items</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(16, 185, 129, 0.15); color:#6ee7b7;">🤝</div>
+        <div>
+          <div class="stat-value" id="adm-returned">--</div>
+          <div class="stat-label">Returned Items</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(244, 63, 94, 0.15); color:#fda4af;">❌</div>
+        <div>
+          <div class="stat-value" id="adm-rejected">--</div>
+          <div class="stat-label">Rejected Claims</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Tabs Navigation -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchAdminTab('claims')">Claim Management</button>
+      <button class="tab-btn" onclick="switchAdminTab('found')">Found Items</button>
+      <button class="tab-btn" onclick="switchAdminTab('lost')">Lost Items</button>
+      <button class="tab-btn" onclick="switchAdminTab('users')">User Accounts</button>
+    </div>
+
+    <!-- Section 1: Claims Management -->
+    <div id="adm-tab-claims" class="tab-content active">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Claim Code</th>
+              <th>Found Item</th>
+              <th>Claimant</th>
+              <th>Contact Details</th>
+              <th>Status</th>
+              <th>QR Status</th>
+              <th>Verification & Approval Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adm-claims-body">
+            <tr><td colspan="7" style="text-align:center;">Loading claims...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 2: Found Items Management -->
+    <div id="adm-tab-found" class="tab-content">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item Code</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Location</th>
+              <th>Date Found</th>
+              <th>Status</th>
+              <th>QR Code</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adm-found-body">
+            <tr><td colspan="8" style="text-align:center;">Loading found items...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 3: Lost Items Management -->
+    <div id="adm-tab-lost" class="tab-content">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item Code</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Reporter</th>
+              <th>Location Lost</th>
+              <th>Date Lost</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adm-lost-body">
+            <tr><td colspan="8" style="text-align:center;">Loading lost items...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 4: Users Management -->
+    <div id="adm-tab-users" class="tab-content">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone Number</th>
+              <th>Student/Employee ID</th>
+              <th>Role</th>
+              <th>Registered Date</th>
+            </tr>
+          </thead>
+          <tbody id="adm-users-body">
+            <tr><td colspan="7" style="text-align:center;">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    function switchAdminTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById(`adm-tab-${tabId}`).classList.add('active');
+    }
+
+    async function loadAdminData() {
+      const user = await requireAuth('ADMIN');
+      if (!user) return;
+
+      try {
+        const stats = await fetchApi('/admin/dashboard');
+        document.getElementById('adm-users').innerText = stats.totalUsers || 0;
+        document.getElementById('adm-lost').innerText = stats.totalLostItems || 0;
+        document.getElementById('adm-found').innerText = stats.totalFoundItems || 0;
+        document.getElementById('adm-claims').innerText = stats.pendingClaims || 0;
+        document.getElementById('adm-matched').innerText = stats.matchedItems || 0;
+        document.getElementById('adm-claimed').innerText = stats.claimedItems || 0;
+        document.getElementById('adm-returned').innerText = stats.returnedItems || 0;
+        document.getElementById('adm-rejected').innerText = stats.rejectedClaims || 0;
+
+        // 1. Claims
+        const claims = await fetchApi('/claims');
+        const cBody = document.getElementById('adm-claims-body');
+        if (!claims || claims.length === 0) {
+          cBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:1.5rem;">No claims submitted yet.</td></tr>';
+        } else {
+          cBody.innerHTML = claims.map(c => `
+            <tr>
+              <td><strong>${c.claimIdCode}</strong></td>
+              <td>${escapeHtml(c.foundItemName)} (${c.foundItemCode})</td>
+              <td>${escapeHtml(c.claimantName)}</td>
+              <td>${escapeHtml(c.contactDetails)}</td>
+              <td>${getStatusBadge(c.status)}</td>
+              <td><span style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(c.qrVerificationResult || 'Scan Needed')}</span></td>
+              <td>
+                <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+                  <a href="qr-verification.html?claimId=${c.id}&foundCode=${c.foundItemCode}" class="btn btn-sm btn-primary" title="Scan or Verify physical QR code">📱 Verify QR</a>
+                  ${c.status === 'PENDING' || c.status === 'UNDER_REVIEW' ? `
+                    <button onclick="approveClaimDirect(${c.id})" class="btn btn-sm btn-success" title="Approve claim directly">✅ Approve</button>
+                    <button onclick="rejectClaimDirect(${c.id})" class="btn btn-sm btn-danger" title="Reject claim">❌ Reject</button>
+                  ` : ''}
+                  ${c.status === 'APPROVED' ? `<button onclick="markReturned(${c.id})" class="btn btn-sm btn-success">🤝 Mark Returned</button>` : ''}
+                </div>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // 2. Found Items
+        const found = await fetchApi('/found-items');
+        const fBody = document.getElementById('adm-found-body');
+        if (!found || found.length === 0) {
+          fBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:1.5rem;">No found items.</td></tr>';
+        } else {
+          fBody.innerHTML = found.map(item => `
+            <tr>
+              <td><code>${item.foundItemIdCode}</code></td>
+              <td><strong>${escapeHtml(item.itemName)}</strong></td>
+              <td>${escapeHtml(item.category)}</td>
+              <td>${escapeHtml(item.locationFound)}</td>
+              <td>${item.dateFound}</td>
+              <td>${getStatusBadge(item.status)}</td>
+              <td><a href="/api/qr/image/${item.id}" target="_blank" class="btn btn-sm btn-secondary">QR Image</a></td>
+              <td>
+                <select onchange="updateFoundStatus(${item.id}, this.value)" class="form-control" style="padding:0.25rem 0.5rem; font-size:0.8rem; width:auto;">
+                  <option value="" disabled selected>Change Status</option>
+                  <option value="REPORTED">REPORTED</option>
+                  <option value="MATCHED">MATCHED</option>
+                  <option value="CLAIMED">CLAIMED</option>
+                  <option value="RETURNED">RETURNED</option>
+                  <option value="REJECTED">REJECTED</option>
+                </select>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // 3. Lost Items
+        const lost = await fetchApi('/lost-items');
+        const lBody = document.getElementById('adm-lost-body');
+        if (!lost || lost.length === 0) {
+          lBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:1.5rem;">No lost items.</td></tr>';
+        } else {
+          lBody.innerHTML = lost.map(item => `
+            <tr>
+              <td><code>${item.lostItemIdCode}</code></td>
+              <td><strong>${escapeHtml(item.itemName)}</strong></td>
+              <td>${escapeHtml(item.category)}</td>
+              <td>${escapeHtml(item.reporterName)}</td>
+              <td>${escapeHtml(item.locationLost)}</td>
+              <td>${item.dateLost}</td>
+              <td>${getStatusBadge(item.status)}</td>
+              <td>
+                <select onchange="updateLostStatus(${item.id}, this.value)" class="form-control" style="padding:0.25rem 0.5rem; font-size:0.8rem; width:auto;">
+                  <option value="" disabled selected>Change Status</option>
+                  <option value="REPORTED">REPORTED</option>
+                  <option value="MATCHED">MATCHED</option>
+                  <option value="CLAIMED">CLAIMED</option>
+                  <option value="RETURNED">RETURNED</option>
+                  <option value="REJECTED">REJECTED</option>
+                </select>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // 4. Users
+        const users = await fetchApi('/users');
+        const uBody = document.getElementById('adm-users-body');
+        if (!users || users.length === 0) {
+          uBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:1.5rem;">No registered users.</td></tr>';
+        } else {
+          uBody.innerHTML = users.map(u => `
+            <tr>
+              <td>#${u.id}</td>
+              <td><strong>${escapeHtml(u.fullName)}</strong></td>
+              <td>${escapeHtml(u.email)}</td>
+              <td>${escapeHtml(u.phoneNumber)}</td>
+              <td>${escapeHtml(u.studentEmpId)}</td>
+              <td><span class="${u.role === 'ADMIN' ? 'role-pill admin' : 'role-pill user'}">${u.role}</span></td>
+              <td>${u.createdAt ? u.createdAt.split('T')[0] : ''}</td>
+            </tr>
+          `).join('');
+        }
+
+      } catch (err) {}
+    }
+
+    async function approveClaimDirect(claimId) {
+      if (!confirm("Are you sure you want to approve this claim? Status will be updated to APPROVED & CLAIMED.")) return;
+      try {
+        await fetchApi(`/claims/${claimId}/review?status=APPROVED&adminNotes=Approved by Admin&qrVerificationResult=QR Verified & Approved`, { method: 'PUT' });
+        showToast('Claim approved successfully! Item status changed to CLAIMED.', 'success');
+        loadAdminData();
+      } catch (err) {}
+    }
+
+    async function rejectClaimDirect(claimId) {
+      if (!confirm("Are you sure you want to reject this claim?")) return;
+      try {
+        await fetchApi(`/claims/${claimId}/review?status=REJECTED&adminNotes=Rejected by Admin`, { method: 'PUT' });
+        showToast('Claim rejected.', 'error');
+        loadAdminData();
+      } catch (err) {}
+    }
+
+    async function updateFoundStatus(id, newStatus) {
+      if (!newStatus) return;
+      try {
+        await fetchApi(`/admin/found-items/${id}/status?status=${newStatus}`, { method: 'PUT' });
+        showToast(`Status updated to ${newStatus}`, 'success');
+        loadAdminData();
+      } catch (err) {}
+    }
+
+    async function updateLostStatus(id, newStatus) {
+      if (!newStatus) return;
+      try {
+        await fetchApi(`/admin/lost-items/${id}/status?status=${newStatus}`, { method: 'PUT' });
+        showToast(`Status updated to ${newStatus}`, 'success');
+        loadAdminData();
+      } catch (err) {}
+    }
+
+    async function markReturned(claimId) {
+      if (!confirm("Are you sure you want to mark this item as physically RETURNED to the claimant?")) return;
+      try {
+        await fetchApi(`/claims/${claimId}/return`, { method: 'PUT' });
+        showToast('Item successfully marked as RETURNED', 'success');
+        loadAdminData();
+      } catch (err) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAdminData);
+  </script>
+</body>
+</html>

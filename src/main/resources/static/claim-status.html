@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Claim Status - Lost & Found Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🔍</div>
+        <span>Lost & Found Portal</span>
+      </a>
+      <div class="nav-links" id="nav-links-area"></div>
+      <div id="user-nav-area"></div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="margin-bottom:2rem;">
+      <h1>Claim Tracking & Recovery Status</h1>
+      <p style="color:var(--text-muted);">Real-time status tracking for submitted ownership claims and verification</p>
+    </div>
+
+    <div id="claims-status-container" style="display:flex; flex-direction:column; gap:1.5rem;">
+      <div class="card" style="text-align:center; padding:3rem;">Loading claim statuses...</div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    async function loadClaims() {
+      try {
+        const claims = await fetchApi('/claims/my');
+        const container = document.getElementById('claims-status-container');
+
+        if (!claims || claims.length === 0) {
+          container.innerHTML = '<div class="card" style="text-align:center; padding:3rem;">No active claim requests submitted yet.</div>';
+          return;
+        }
+
+        container.innerHTML = claims.map(c => `
+          <div class="card" style="padding:2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+              <div>
+                <div style="font-size:0.8rem; color:var(--text-subtle);">Claim Reference Code:</div>
+                <strong style="font-size:1.2rem; color:var(--primary);">${c.claimIdCode}</strong>
+                <div style="font-size:0.95rem; color:var(--text-main); margin-top:0.25rem;">
+                  Item: <strong>${escapeHtml(c.foundItemName)}</strong> (<code>${c.foundItemCode}</code>)
+                </div>
+              </div>
+              <div>${getStatusBadge(c.status)}</div>
+            </div>
+
+            <!-- Workflow Lifecycle Tracker -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(17, 24, 39, 0.9); padding:1rem 1.5rem; border-radius:12px; margin:1.5rem 0; gap:0.5rem; overflow-x:auto;">
+              <div style="text-align:center; flex:1;">
+                <div style="width:28px; height:28px; border-radius:50%; background:#10b981; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 0.35rem; font-size:0.75rem; font-weight:700;">✓</div>
+                <div style="font-size:0.75rem; font-weight:600;">CLAIM SUBMITTED</div>
+              </div>
+              <div style="height:2px; background:var(--border-color); flex:1;"></div>
+              <div style="text-align:center; flex:1;">
+                <div style="width:28px; height:28px; border-radius:50%; background:${c.status !== 'PENDING' ? '#10b981' : 'var(--border-color)'}; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 0.35rem; font-size:0.75rem; font-weight:700;">${c.status !== 'PENDING' ? '✓' : '2'}</div>
+                <div style="font-size:0.75rem; font-weight:600;">UNDER REVIEW</div>
+              </div>
+              <div style="height:2px; background:var(--border-color); flex:1;"></div>
+              <div style="text-align:center; flex:1;">
+                <div style="width:28px; height:28px; border-radius:50%; background:${c.status === 'APPROVED' || c.status === 'RETURNED' ? '#10b981' : (c.status === 'REJECTED' ? '#f43f5e' : 'var(--border-color)')}; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 0.35rem; font-size:0.75rem; font-weight:700;">${c.status === 'APPROVED' || c.status === 'RETURNED' ? '✓' : (c.status === 'REJECTED' ? '✕' : '3')}</div>
+                <div style="font-size:0.75rem; font-weight:600;">${c.status === 'REJECTED' ? 'REJECTED' : 'QR VERIFIED'}</div>
+              </div>
+              <div style="height:2px; background:var(--border-color); flex:1;"></div>
+              <div style="text-align:center; flex:1;">
+                <div style="width:28px; height:28px; border-radius:50%; background:${c.status === 'RETURNED' ? '#10b981' : 'var(--border-color)'}; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 0.35rem; font-size:0.75rem; font-weight:700;">${c.status === 'RETURNED' ? '✓' : '4'}</div>
+                <div style="font-size:0.75rem; font-weight:600;">HANDOVER COMPLETE</div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; font-size:0.9rem;">
+              <div>
+                <strong>Claimant Details:</strong> ${escapeHtml(c.claimantName)} (${escapeHtml(c.contactDetails)})
+                <br>
+                <strong>Identifying Proof:</strong> ${escapeHtml(c.identifyingDetails || 'Provided')}
+              </div>
+              <div>
+                <strong>QR Verification Status:</strong> ${escapeHtml(c.qrVerificationResult || 'Pending Administrator QR Scan')}
+                <br>
+                <strong>Admin Notes:</strong> ${escapeHtml(c.adminNotes || 'Review in progress by administration office')}
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', loadClaims);
+  </script>
+</body>
+</html>
